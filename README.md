@@ -263,7 +263,7 @@ cmake --build build -j
 - LightGlue（论文）：*LightGlue: Local Feature Matching at Light Speed*
 - LightGlue 官方仓库：https://github.com/cvg/LightGlue
 
-> 请根据你实际采用的 SuperPoint/LightGlue 权重来源，在 README 中补全具体链接与许可证文本，确保开源合规。
+
 
 ---
 
