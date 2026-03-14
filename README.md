@@ -5,10 +5,15 @@
 - 使用 **LightGlue** 进行特征匹配
 - 输出匹配可视化图像，并打印推理耗时
 
-工程内提供三个可执行程序：
+工程内提供多个可执行程序：
 - `sp_lg_demo`：完整版（兼容性更强，自动解析 I/O 名称、兼容多种 keypoints/matches 输出形状）
 - `sp_lg_demo_simple`：精简版（固定 I/O 名称与常见 shape，支持 one-shot 与常驻交互模式，支持 `--cuda` / `--profile`）
 - `sp_lg_demo_gpu`：GPU 默认版（启动即自动尝试 CUDA，失败自动回退 CPU；支持 one-shot 与常驻模式）
+- `sp_lg_demo_gpu1`：方案一（网格分桶 + 每格 Top-K）
+- `sp_lg_demo_gpu2`：方案二（ANMS / SSC）
+- `sp_lg_demo_gpu3`：方案三（全局 Top-N 预筛 + 网格均匀化）
+- `sp_lg_demo_gpu4`：方案四（四叉树式分配，类似 ORB-SLAM）
+- `sp_lg_demo_gpu5`：方案五（全局 Top-N + 网格 Top-K + 最终总数截断）
 
 ---
 
@@ -51,6 +56,36 @@
 - 支持 `min_kpt_dist` 参数：在输入 LightGlue 前按最小点间距过滤 SuperPoint 关键点，用于减少匹配耗时
 - 当 `min_kpt_dist=-1` 时，禁用距离过滤，保留全部关键点
 
+### `src/sp_lg_demo_gpu1.cpp`（`sp_lg_demo_gpu1`）
+主要特点：
+- 默认自动尝试 CUDA，失败自动回退 CPU
+- 过滤策略：`GridTopK(cell_size, per_cell_topk)`
+- 默认参数：`cell_size=48`，`per_cell_topk=4`
+
+### `src/sp_lg_demo_gpu2.cpp`（`sp_lg_demo_gpu2`）
+主要特点：
+- 默认自动尝试 CUDA，失败自动回退 CPU
+- 过滤策略：`ANMS(max_kpts, robust_coeff)`
+- 默认参数：`max_kpts=768`，`robust_coeff=0.90`
+
+### `src/sp_lg_demo_gpu3.cpp`（`sp_lg_demo_gpu3`）
+主要特点：
+- 默认自动尝试 CUDA，失败自动回退 CPU
+- 过滤策略：`PreTopNThenGrid(pre_top_n, cell_size, per_cell_topk)`
+- 默认参数：`pre_top_n=1200`，`cell_size=48`，`per_cell_topk=4`
+
+### `src/sp_lg_demo_gpu4.cpp`（`sp_lg_demo_gpu4`）
+主要特点：
+- 默认自动尝试 CUDA，失败自动回退 CPU
+- 过滤策略：`QuadTree(max_kpts)`
+- 默认参数：`max_kpts=768`
+
+### `src/sp_lg_demo_gpu5.cpp`（`sp_lg_demo_gpu5`）
+主要特点：
+- 默认自动尝试 CUDA，失败自动回退 CPU
+- 过滤策略：`PreTopN+GridTopK+Cap(pre_top_n, cell_size, per_cell_topk, max_total_n)`
+- 默认参数：`pre_top_n=1500`，`cell_size=40`，`per_cell_topk=5`，`max_total_n=768`
+
 ---
 
 ## 2. 目录结构
@@ -61,7 +96,12 @@ sp_lg_demo/
 ├── src/
 │   ├── sp_lg_demo.cpp
 │   ├── sp_lg_demo_simple.cpp
-│   └── sp_lg_demo_gpu.cpp
+│   ├── sp_lg_demo_gpu.cpp
+│   ├── sp_lg_demo_gpu1.cpp
+│   ├── sp_lg_demo_gpu2.cpp
+│   ├── sp_lg_demo_gpu3.cpp
+│   ├── sp_lg_demo_gpu4.cpp
+│   └── sp_lg_demo_gpu5.cpp
 ├── models/
 │   ├── superpoint.onnx
 │   └── lightglue_sim.onnx
@@ -111,6 +151,11 @@ cmake --build build -j
 - `build/sp_lg_demo`
 - `build/sp_lg_demo_simple`
 - `build/sp_lg_demo_gpu`
+- `build/sp_lg_demo_gpu1`
+- `build/sp_lg_demo_gpu2`
+- `build/sp_lg_demo_gpu3`
+- `build/sp_lg_demo_gpu4`
+- `build/sp_lg_demo_gpu5`
 
 ---
 
@@ -227,6 +272,128 @@ cmake --build build -j
   480 752 10 -1 --profile
 ```
 
+## 5.4 `sp_lg_demo_gpu1~5`（多种关键点筛选策略）
+
+这 5 个程序都采用统一模式开关：
+- `--oneshot`：一次性处理一对图像
+- `--resident`：常驻交互模式
+
+共同特点：
+- 默认自动尝试 CUDA，失败自动回退 CPU
+- 都支持可选 `--profile`
+
+### A) `sp_lg_demo_gpu1`（GridTopK）
+
+one-shot：
+
+```bash
+./build/sp_lg_demo_gpu1 --oneshot \
+  ./models/superpoint.onnx ./models/lightglue_sim.onnx \
+  ./data/img0.png ./data/img1.png ./output/matches_gpu1.png \
+  480 752 50 48 4 --profile
+```
+
+resident：
+
+```bash
+./build/sp_lg_demo_gpu1 --resident \
+  ./models/superpoint.onnx ./models/lightglue_sim.onnx \
+  480 752 50 10 48 4 --profile
+```
+
+参数：`[iters] [cell_size] [per_cell_topk]`
+
+### B) `sp_lg_demo_gpu2`（ANMS）
+
+one-shot：
+
+```bash
+./build/sp_lg_demo_gpu2 --oneshot \
+  ./models/superpoint.onnx ./models/lightglue_sim.onnx \
+  ./data/img0.png ./data/img1.png ./output/matches_gpu2.png \
+  480 752 50 768 0.90 --profile
+```
+
+resident：
+
+```bash
+./build/sp_lg_demo_gpu2 --resident \
+  ./models/superpoint.onnx ./models/lightglue_sim.onnx \
+  480 752 50 10 768 0.90 --profile
+```
+
+参数：`[iters] [max_kpts] [robust_coeff]`
+
+### C) `sp_lg_demo_gpu3`（PreTopNThenGrid）
+
+one-shot：
+
+```bash
+./build/sp_lg_demo_gpu3 --oneshot \
+  ./models/superpoint.onnx ./models/lightglue_sim.onnx \
+  ./data/img0.png ./data/img1.png ./output/matches_gpu3.png \
+  480 752 50 1200 48 4 --profile
+```
+
+resident：
+
+```bash
+./build/sp_lg_demo_gpu3 --resident \
+  ./models/superpoint.onnx ./models/lightglue_sim.onnx \
+  480 752 50 10 1200 48 4 --profile
+```
+
+参数：`[iters] [pre_top_n] [cell_size] [per_cell_topk]`
+
+### D) `sp_lg_demo_gpu4`（QuadTree）
+
+one-shot：
+
+```bash
+./build/sp_lg_demo_gpu4 --oneshot \
+  ./models/superpoint.onnx ./models/lightglue_sim.onnx \
+  ./data/img0.png ./data/img1.png ./output/matches_gpu4.png \
+  480 752 50 768 --profile
+```
+
+resident：
+
+```bash
+./build/sp_lg_demo_gpu4 --resident \
+  ./models/superpoint.onnx ./models/lightglue_sim.onnx \
+  480 752 50 10 768 --profile
+```
+
+参数：`[iters] [max_kpts]`
+
+### E) `sp_lg_demo_gpu5`（PreTopN+GridTopK+Cap）
+
+one-shot：
+
+```bash
+./build/sp_lg_demo_gpu5 --oneshot \
+  ./models/superpoint.onnx ./models/lightglue_sim.onnx \
+  ./data/img0.png ./data/img1.png ./output/matches_gpu5.png \
+  480 752 50 1500 40 5 768 --profile
+```
+
+resident：
+
+```bash
+./build/sp_lg_demo_gpu5 --resident \
+  ./models/superpoint.onnx ./models/lightglue_sim.onnx \
+  480 752 50 10 1500 40 5 768 --profile
+```
+
+参数：`[iters] [pre_top_n] [cell_size] [per_cell_topk] [max_total_n]`
+
+### 方案选择建议
+
+- 追求简单稳定：先试 `sp_lg_demo_gpu`（`min_kpt_dist`）
+- 追求较均匀分布：试 `sp_lg_demo_gpu1` 或 `sp_lg_demo_gpu3`
+- 追求抑制聚簇强角点：试 `sp_lg_demo_gpu2`（ANMS）
+- 追求空间覆盖和上限控制：试 `sp_lg_demo_gpu4` 或 `sp_lg_demo_gpu5`
+
 ---
 
 ## 6. 模型 I/O 约定
@@ -278,6 +445,9 @@ cmake --build build -j
   - 优先使用 `sp_lg_demo_gpu`
   - 增大 `min_kpt_dist`（如 `10/12/15/20`）可减少输入到 LightGlue 的关键点数量
   - 若需要对照完整精度，可将 `min_kpt_dist` 设为 `-1` 禁用过滤
+- 使用 `sp_lg_demo_gpu1~5` 报参数错误：
+  - 这几个程序要求第一个参数必须是 `--oneshot` 或 `--resident`
+  - 请按 README 的参数顺序传参
 - 图像读取失败：
   - 检查输入路径是否存在，确认格式可被 OpenCV 解码
 

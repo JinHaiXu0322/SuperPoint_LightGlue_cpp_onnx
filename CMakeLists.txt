@@ -80,3 +80,95 @@ set_target_properties(sp_lg_demo_gpu PROPERTIES
         BUILD_RPATH "${ORT_LIB_DIR}"
         INSTALL_RPATH "${ORT_LIB_DIR}"
 )
+
+
+# 方案一：网格分桶 + 每格 Top-K
+add_executable(sp_lg_demo_gpu1 src/sp_lg_demo_gpu1.cpp)
+
+target_include_directories(sp_lg_demo_gpu1 PRIVATE
+        ${OpenCV_INCLUDE_DIRS}
+        ${ORT_DIR}/include
+)
+
+target_link_libraries(sp_lg_demo_gpu1 PRIVATE
+        ${OpenCV_LIBS}
+        ${ORT_LIB_DIR}/libonnxruntime.so
+)
+
+set_target_properties(sp_lg_demo_gpu1 PROPERTIES
+        BUILD_RPATH "${ORT_LIB_DIR}"
+        INSTALL_RPATH "${ORT_LIB_DIR}"
+)
+
+# 方案二：ANMS / SSC（自适应非极大值抑制）
+add_executable(sp_lg_demo_gpu2 src/sp_lg_demo_gpu2.cpp)
+
+target_include_directories(sp_lg_demo_gpu2 PRIVATE
+        ${OpenCV_INCLUDE_DIRS}
+        ${ORT_DIR}/include
+)
+
+target_link_libraries(sp_lg_demo_gpu2 PRIVATE
+        ${OpenCV_LIBS}
+        ${ORT_LIB_DIR}/libonnxruntime.so
+)
+
+set_target_properties(sp_lg_demo_gpu2 PROPERTIES
+        BUILD_RPATH "${ORT_LIB_DIR}"
+        INSTALL_RPATH "${ORT_LIB_DIR}"
+)
+
+# 方案三：先全局按 score 预筛，再做网格均匀化
+add_executable(sp_lg_demo_gpu3 src/sp_lg_demo_gpu3.cpp)
+
+target_include_directories(sp_lg_demo_gpu3 PRIVATE
+        ${OpenCV_INCLUDE_DIRS}
+        ${ORT_DIR}/include
+)
+
+target_link_libraries(sp_lg_demo_gpu3 PRIVATE
+        ${OpenCV_LIBS}
+        ${ORT_LIB_DIR}/libonnxruntime.so
+)
+
+set_target_properties(sp_lg_demo_gpu3 PROPERTIES
+        BUILD_RPATH "${ORT_LIB_DIR}"
+        INSTALL_RPATH "${ORT_LIB_DIR}"
+)
+
+# 方案四：四叉树 / 八叉树式分配（类似 ORB-SLAM 的思路）
+add_executable(sp_lg_demo_gpu4 src/sp_lg_demo_gpu4.cpp)
+
+target_include_directories(sp_lg_demo_gpu4 PRIVATE
+        ${OpenCV_INCLUDE_DIRS}
+        ${ORT_DIR}/include
+)
+
+target_link_libraries(sp_lg_demo_gpu4 PRIVATE
+        ${OpenCV_LIBS}
+        ${ORT_LIB_DIR}/libonnxruntime.so
+)
+
+set_target_properties(sp_lg_demo_gpu4 PROPERTIES
+        BUILD_RPATH "${ORT_LIB_DIR}"
+        INSTALL_RPATH "${ORT_LIB_DIR}"
+)
+
+# 方案五：全局 Top-N 预筛 + 网格 Top-K + 最终总数截断
+add_executable(sp_lg_demo_gpu5 src/sp_lg_demo_gpu5.cpp)
+
+target_include_directories(sp_lg_demo_gpu5 PRIVATE
+        ${OpenCV_INCLUDE_DIRS}
+        ${ORT_DIR}/include
+)
+
+target_link_libraries(sp_lg_demo_gpu5 PRIVATE
+        ${OpenCV_LIBS}
+        ${ORT_LIB_DIR}/libonnxruntime.so
+)
+
+set_target_properties(sp_lg_demo_gpu5 PROPERTIES
+        BUILD_RPATH "${ORT_LIB_DIR}"
+        INSTALL_RPATH "${ORT_LIB_DIR}"
+)
+

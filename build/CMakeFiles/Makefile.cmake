@@ -51,7 +51,12 @@ set(CMAKE_MAKEFILE_PRODUCTS
 
 # Dependency information for all targets:
 set(CMAKE_DEPEND_INFO_FILES
+  "CMakeFiles/sp_lg_demo_gpu3.dir/DependInfo.cmake"
+  "CMakeFiles/sp_lg_demo_gpu2.dir/DependInfo.cmake"
+  "CMakeFiles/sp_lg_demo_gpu5.dir/DependInfo.cmake"
+  "CMakeFiles/sp_lg_demo_gpu1.dir/DependInfo.cmake"
   "CMakeFiles/sp_lg_demo_gpu.dir/DependInfo.cmake"
   "CMakeFiles/sp_lg_demo_simple.dir/DependInfo.cmake"
+  "CMakeFiles/sp_lg_demo_gpu4.dir/DependInfo.cmake"
   "CMakeFiles/sp_lg_demo.dir/DependInfo.cmake"
   )

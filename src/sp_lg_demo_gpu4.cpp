@@ -1,3 +1,4 @@
+// 方案四：四叉树 / 八叉树式分配（类似 ORB-SLAM 的思路）
 #include <opencv2/opencv.hpp>
 #include <onnxruntime_cxx_api.h>
 
@@ -10,6 +11,9 @@
 #include <array>
 #include <cstring>
 #include <sstream>
+#include <unordered_map>
+#include <limits>
+#include <cmath>
 
 // 这个版本是“精简版”Demo：
 // - 假设模型 I/O 与你打印出来的一致：
@@ -42,6 +46,7 @@ static std::string elementTypeToString(ONNXTensorElementDataType t) {
 
 struct SPFeatures {
     std::vector<cv::KeyPoint> kpts;
+    std::vector<float> scores;
     std::vector<float> desc; // [N*D]
     int64_t N = 0;
     int64_t D = 0;
@@ -150,6 +155,18 @@ static SPFeatures runSuperPointSimple(Ort::Session& sp_sess,
 
     SPFeatures f;
     f.kpts = std::move(kpts);
+    f.scores.reserve((size_t)N);
+    const auto& score = outs[1];
+    auto s_info = score.GetTensorTypeAndShapeInfo();
+    if (s_info.GetElementType() == ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT) {
+        const float* s_ptr = score.GetTensorData<float>();
+        int64_t Ns = (int64_t)s_info.GetElementCount();
+        int64_t useN = std::min<int64_t>(N, Ns);
+        f.scores.assign(s_ptr, s_ptr + useN);
+        if (useN < N) f.scores.resize((size_t)N, 0.f);
+    } else {
+        f.scores.assign((size_t)N, 0.f);
+    }
     f.N = N;
     f.D = D;
     f.desc.assign(d_ptr, d_ptr + (size_t)Nd * (size_t)D);
@@ -168,6 +185,19 @@ static std::vector<MatchWithScore> runLightGlueSimple(Ort::Session& lg_sess,
                                                       const SPFeatures& f1,
                                                       float mscore_thresh) {
     auto t0 = std::chrono::steady_clock::now();
+
+    if (f0.N <= 0 || f1.N <= 0 || f0.D <= 0 || f1.D <= 0 || f0.desc.empty() || f1.desc.empty()) {
+        std::cout << "[LightGlue] skip because empty input features. "
+                  << "f0.N=" << f0.N << " f1.N=" << f1.N
+                  << " f0.D=" << f0.D << " f1.D=" << f1.D << std::endl;
+        return {};
+    }
+    if (f0.desc.size() < (size_t)f0.N * (size_t)f0.D || f1.desc.size() < (size_t)f1.N * (size_t)f1.D) {
+        std::cout << "[LightGlue] skip because descriptor buffer is smaller than shape requires. "
+                  << "f0.desc=" << f0.desc.size() << " need=" << ((size_t)f0.N * (size_t)f0.D)
+                  << " f1.desc=" << f1.desc.size() << " need=" << ((size_t)f1.N * (size_t)f1.D) << std::endl;
+        return {};
+    }
 
     // kpts: [1,N,2]
     std::vector<float> k0((size_t)f0.N * 2), k1((size_t)f1.N * 2);
@@ -311,6 +341,161 @@ static void printSessionProviders(const char* tag, Ort::Session& /*sess*/) {
     std::cout << "[EP][" << tag << "] active provider list query is not supported in this ORT headers; use --profile to confirm EP (CUDA/CPU) from the profile JSON.\n";
 }
 
+
+static float getScoreAt(const SPFeatures& f, int idx) {
+    return ((size_t)idx < f.scores.size()) ? f.scores[(size_t)idx] : 0.f;
+}
+
+static std::vector<int> makeScoreOrderDesc(const SPFeatures& f) {
+    std::vector<int> order((size_t)f.N);
+    for (int i = 0; i < (int)f.N; ++i) order[(size_t)i] = i;
+    std::sort(order.begin(), order.end(), [&](int a, int b) {
+        float sa = getScoreAt(f, a);
+        float sb = getScoreAt(f, b);
+        if (sa == sb) return a < b;
+        return sa > sb;
+    });
+    return order;
+}
+
+static void applySelectedIndices(SPFeatures& f, const std::vector<int>& selected) {
+    if (selected.empty()) {
+        f.kpts.clear();
+        f.scores.clear();
+        f.desc.clear();
+        f.N = 0;
+        return;
+    }
+    std::vector<cv::KeyPoint> new_kpts;
+    std::vector<float> new_scores;
+    std::vector<float> new_desc;
+    new_kpts.reserve(selected.size());
+    new_scores.reserve(selected.size());
+    new_desc.reserve(selected.size() * (size_t)f.D);
+    for (int idx : selected) {
+        if (idx < 0 || idx >= (int)f.N) continue;
+        new_kpts.push_back(f.kpts[(size_t)idx]);
+        new_scores.push_back(getScoreAt(f, idx));
+        const float* dptr = f.desc.data() + (size_t)idx * (size_t)f.D;
+        new_desc.insert(new_desc.end(), dptr, dptr + (size_t)f.D);
+    }
+    f.kpts = std::move(new_kpts);
+    f.scores = std::move(new_scores);
+    f.desc = std::move(new_desc);
+    f.N = (int64_t)f.kpts.size();
+}
+
+static std::vector<int> selectTopByScore(const SPFeatures& f, int top_n) {
+    auto order = makeScoreOrderDesc(f);
+    if (top_n > 0 && (int)order.size() > top_n) order.resize((size_t)top_n);
+    return order;
+}
+
+static std::vector<int> sortSelectedByScoreDesc(const SPFeatures& f, std::vector<int> selected) {
+    std::sort(selected.begin(), selected.end(), [&](int a, int b) {
+        float sa = getScoreAt(f, a);
+        float sb = getScoreAt(f, b);
+        if (sa == sb) return a < b;
+        return sa > sb;
+    });
+    return selected;
+}
+
+struct QuadNode {
+    float x0 = 0.f, y0 = 0.f, x1 = 0.f, y1 = 0.f;
+    std::vector<int> pts;
+};
+
+static bool splitQuadNode(const SPFeatures& f, const QuadNode& node, std::array<QuadNode, 4>& child) {
+    if (node.pts.size() <= 1) return false;
+    float mx = 0.5f * (node.x0 + node.x1);
+    float my = 0.5f * (node.y0 + node.y1);
+    if (mx <= node.x0 || mx >= node.x1 || my <= node.y0 || my >= node.y1) return false;
+
+    child[0].x0 = node.x0; child[0].y0 = node.y0; child[0].x1 = mx;      child[0].y1 = my;
+    child[1].x0 = mx;      child[1].y0 = node.y0; child[1].x1 = node.x1; child[1].y1 = my;
+    child[2].x0 = node.x0; child[2].y0 = my;      child[2].x1 = mx;      child[2].y1 = node.y1;
+    child[3].x0 = mx;      child[3].y0 = my;      child[3].x1 = node.x1; child[3].y1 = node.y1;
+
+    for (int idx : node.pts) {
+        const auto& p = f.kpts[(size_t)idx].pt;
+        int cid = 0;
+        if (p.x >= mx) cid += 1;
+        if (p.y >= my) cid += 2;
+        child[(size_t)cid].pts.push_back(idx);
+    }
+
+    int non_empty = 0;
+    for (int i = 0; i < 4; ++i) if (!child[(size_t)i].pts.empty()) ++non_empty;
+    return non_empty >= 2;
+}
+
+// 方案四：四叉树式分配（类似 ORB-SLAM 的思路）
+// 推荐参数（针对 752x480 输入）：max_kpts=768
+static void filterFeaturesQuadTree(SPFeatures& f, int img_h, int img_w, int max_kpts) {
+    if (f.N <= 1 || f.D <= 0) return;
+    if (max_kpts <= 0) return;
+    if (f.desc.size() < (size_t)f.N * (size_t)f.D) return;
+    if (f.N <= max_kpts) return;
+
+    std::vector<QuadNode> nodes;
+    QuadNode root;
+    root.x0 = 0.f; root.y0 = 0.f; root.x1 = (float)img_w; root.y1 = (float)img_h;
+    root.pts.reserve((size_t)f.N);
+    for (int i = 0; i < (int)f.N; ++i) root.pts.push_back(i);
+    nodes.push_back(std::move(root));
+
+    bool changed = true;
+    while (changed) {
+        changed = false;
+        int splittable = 0;
+        for (const auto& n : nodes) if (n.pts.size() > 1) ++splittable;
+        if ((int)nodes.size() >= max_kpts || splittable == 0) break;
+
+        std::vector<QuadNode> next_nodes;
+        next_nodes.reserve(nodes.size() * 2);
+        for (const auto& node : nodes) {
+            if ((int)next_nodes.size() >= max_kpts) {
+                next_nodes.push_back(node);
+                continue;
+            }
+            std::array<QuadNode, 4> child;
+            bool ok = splitQuadNode(f, node, child);
+            if (!ok) {
+                next_nodes.push_back(node);
+                continue;
+            }
+            for (int i = 0; i < 4; ++i) {
+                if (!child[(size_t)i].pts.empty()) next_nodes.push_back(std::move(child[(size_t)i]));
+            }
+            changed = true;
+        }
+        nodes.swap(next_nodes);
+    }
+
+    std::vector<int> selected;
+    selected.reserve(nodes.size());
+    for (const auto& node : nodes) {
+        int best_idx = -1;
+        float best_score = -1.f;
+        for (int idx : node.pts) {
+            float s = getScoreAt(f, idx);
+            if (best_idx < 0 || s > best_score) {
+                best_idx = idx;
+                best_score = s;
+            }
+        }
+        if (best_idx >= 0) selected.push_back(best_idx);
+    }
+
+    selected = sortSelectedByScoreDesc(f, std::move(selected));
+    if ((int)selected.size() > max_kpts) selected.resize((size_t)max_kpts);
+
+    int64_t oldN = f.N;
+    applySelectedIndices(f, selected);
+    std::cout << "[Filter][QuadTree] max_kpts=" << max_kpts
+              << " keep " << f.N << "/" << oldN << " keypoints\n";
+}
 static bool tryParseInt(const std::string& s, int& out) {
     try {
         size_t idx = 0;
@@ -323,14 +508,31 @@ static bool tryParseInt(const std::string& s, int& out) {
     }
 }
 
+static bool tryParseFloat(const std::string& s, float& out) {
+    try {
+        size_t idx = 0;
+        float v = std::stof(s, &idx);
+        if (idx != s.size()) return false;
+        out = v;
+        return true;
+    } catch (...) {
+        return false;
+    }
+}
+
 static void printUsage(const char* prog) {
     std::cout
-        << "Usage (one-shot, compatible with previous version):\n"
-        << "  " << prog << " <sp.onnx> <lg.onnx> <img0> <img1> <out.png> <H> <W> [iters] [--profile]\n\n"
-        << "Usage (resident interactive):\n"
-        << "  " << prog << " <sp.onnx> <lg.onnx> <H> <W> [iters] [warmup] [--profile]\n"
-        << "  then input lines: <img0> <img1> [out.png], or 'q' to quit\n";
+        << "Usage:\n"
+        << "  One-shot mode:\n"
+        << "    " << prog << " --oneshot <sp.onnx> <lg.onnx> <img0> <img1> <out.png> <H> <W> [iters] [max_kpts] [--profile]\n"
+        << "\n"
+        << "  Resident interactive mode:\n"
+        << "    " << prog << " --resident <sp.onnx> <lg.onnx> <H> <W> [iters] [warmup] [max_kpts] [--profile]\n"
+        << "    then input lines: <img0> <img1> [out.png], or 'q' to quit\n";
 }
+
+
+
 
 // 新增：解析可选参数（只支持 --profile）
 struct ExtraFlags {
@@ -458,68 +660,79 @@ int main(int argc, char** argv) {
     //   或：
     //     img0_path img1_path
     //   输入 q 或 quit 退出。
-
-    if (argc < 3) {
+    if (argc < 4) {
         printUsage(argv[0]);
         return 0;
     }
 
-    // 解析额外 flag（在任何模式下都支持）
     ExtraFlags flags = parseExtraFlags(argc, argv);
 
-    std::string sp_path = argv[1];
-    std::string lg_path = argv[2];
+    std::string mode = argv[1];
+    if (mode != "--oneshot" && mode != "--resident") {
+        std::cout << "[Error] First argument must be --oneshot or --resident.\n";
+        printUsage(argv[0]);
+        return 1;
+    }
 
-    // 模式判断：
-    // - one-shot: argv[3] argv[4] argv[5] 是图片路径，argv[6]/argv[7] 是 H/W
-    // - resident: argv[3]/argv[4] 是 H/W
-    bool one_shot = false;
+    bool one_shot = (mode == "--oneshot");
+
+    std::string sp_path = argv[2];
+    std::string lg_path = argv[3];
     std::string img0_arg, img1_arg, out_arg;
     int H = 480, W = 752;
     int iters = 10;
     int warmup = 10;
+    int max_kpts = 768;
 
-    if (argc >= 8) {
-        // 优先尝试 one-shot：要求 argv[6]/argv[7] 能解析为整数
-        int Htmp = 0, Wtmp = 0;
-        if (tryParseInt(argv[6], Htmp) && tryParseInt(argv[7], Wtmp)) {
-            one_shot = true;
-            img0_arg = argv[3];
-            img1_arg = argv[4];
-            out_arg = argv[5];
-            H = Htmp;
-            W = Wtmp;
-            if (argc >= 9) {
-                int it = 0;
-                if (tryParseInt(argv[8], it) && it > 0) iters = it;
-            }
-            warmup = 0; // one-shot 默认不 warmup（避免额外耗时），需要的话可再加参数扩展
-        }
-    }
-
-    if (!one_shot) {
-        // resident 模式：argv[3]/argv[4] 必须是 H/W
-        if (argc < 5) {
-            printUsage(argv[0]);
-            return 0;
-        }
-        if (!tryParseInt(argv[3], H) || !tryParseInt(argv[4], W)) {
-            std::cout << "[Error] H/W parse failed. Did you mean to run one-shot mode?\n";
+    if (one_shot) {
+        if (argc < 9) {
             printUsage(argv[0]);
             return 1;
         }
-        if (argc >= 6) {
+        img0_arg = argv[4];
+        img1_arg = argv[5];
+        out_arg = argv[6];
+        if (!tryParseInt(argv[7], H) || !tryParseInt(argv[8], W)) {
+            std::cout << "[Error] Failed to parse H/W for --oneshot mode.\n";
+            printUsage(argv[0]);
+            return 1;
+        }
+        if (argc >= 10) {
             int it = 0;
-            if (tryParseInt(argv[5], it) && it > 0) iters = it;
+            if (tryParseInt(argv[9], it) && it > 0) iters = it;
+        }
+        if (argc >= 11) {
+            int v = 0;
+            if (tryParseInt(argv[10], v) && v > 0) max_kpts = v;
+        }
+        warmup = 0;
+    } else {
+        if (argc < 6) {
+            printUsage(argv[0]);
+            return 1;
+        }
+        if (!tryParseInt(argv[4], H) || !tryParseInt(argv[5], W)) {
+            std::cout << "[Error] Failed to parse H/W for --resident mode.\n";
+            printUsage(argv[0]);
+            return 1;
         }
         if (argc >= 7) {
+            int it = 0;
+            if (tryParseInt(argv[6], it) && it > 0) iters = it;
+        }
+        if (argc >= 8) {
             int wu = 0;
-            if (tryParseInt(argv[6], wu) && wu >= 0) warmup = wu;
+            if (tryParseInt(argv[7], wu) && wu >= 0) warmup = wu;
+        }
+        if (argc >= 9) {
+            int v = 0;
+            if (tryParseInt(argv[8], v) && v > 0) max_kpts = v;
         }
     }
 
     if (iters <= 0) iters = 1;
     if (warmup < 0) warmup = 0;
+
 
     Ort::Env env(ORT_LOGGING_LEVEL_WARNING, "sp_lg_resident");
     Ort::SessionOptions opt;
@@ -558,6 +771,7 @@ int main(int argc, char** argv) {
     std::cout << "[Config] mode=" << (one_shot ? "one-shot" : "resident")
               << " H=" << H << " W=" << W << " iters=" << iters << " warmup=" << warmup
               << " use_cuda=" << (use_cuda ? 1 : 0) << " device_id=" << default_device_id
+              << " filter=QuadTree(max_kpts=" << max_kpts << ")"
               << " profiling=" << (flags.enable_profile ? 1 : 0) << "\n";
 
     float mscore_thresh = 0.1f;
@@ -577,6 +791,8 @@ int main(int argc, char** argv) {
             auto t0 = std::chrono::steady_clock::now();
             auto f0 = runSuperPointSimple(sp_sess, img0, H, W, "img0");
             auto f1 = runSuperPointSimple(sp_sess, img1, H, W, "img1");
+            filterFeaturesQuadTree(f0, H, W, max_kpts);
+            filterFeaturesQuadTree(f1, H, W, max_kpts);
             auto pairs = runLightGlueSimple(lg_sess, f0, f1, mscore_thresh);
             auto t1 = std::chrono::steady_clock::now();
 
@@ -615,14 +831,22 @@ int main(int argc, char** argv) {
 
     // warm-up：先跑几次，减少第一次的抖动（不计入后续统计）
     if (warmup > 0) {
-        std::cout << "[Warmup] begin " << warmup << " iterations...\n";
-        cv::Mat dummy(H, W, CV_8UC1, cv::Scalar(0));
+        std::cout << "[Warmup] begin " << warmup << " iterations..." << std::endl;
+        cv::Mat dummy(H, W, CV_8UC1);
+        cv::randu(dummy, 0, 255);
         for (int i = 0; i < warmup; ++i) {
             auto f0 = runSuperPointSimple(sp_sess, dummy, H, W, "warm0");
             auto f1 = runSuperPointSimple(sp_sess, dummy, H, W, "warm1");
+            filterFeaturesQuadTree(f0, H, W, max_kpts);
+            filterFeaturesQuadTree(f1, H, W, max_kpts);
+            if (f0.N <= 0 || f1.N <= 0 || f0.D <= 0 || f1.D <= 0 || f0.desc.empty() || f1.desc.empty()) {
+                std::cout << "[Warmup] skip LightGlue because empty features after filtering. "
+                          << "f0.N=" << f0.N << " f1.N=" << f1.N << std::endl;
+                continue;
+            }
             (void)runLightGlueSimple(lg_sess, f0, f1, mscore_thresh);
         }
-        std::cout << "[Warmup] done.\n";
+        std::cout << "[Warmup] done." << std::endl;
     }
 
     std::cout << "\nEnter: <img0_path> <img1_path> [out_path]  (or 'q' to quit)\n";

@@ -53,8 +53,13 @@ CMAKE_BINARY_DIR = /home/xjh/sp_lg_demo/build
 # Directory level rules for the build root directory
 
 # The main recursive "all" target.
+all: CMakeFiles/sp_lg_demo_gpu3.dir/all
+all: CMakeFiles/sp_lg_demo_gpu2.dir/all
+all: CMakeFiles/sp_lg_demo_gpu5.dir/all
+all: CMakeFiles/sp_lg_demo_gpu1.dir/all
 all: CMakeFiles/sp_lg_demo_gpu.dir/all
 all: CMakeFiles/sp_lg_demo_simple.dir/all
+all: CMakeFiles/sp_lg_demo_gpu4.dir/all
 all: CMakeFiles/sp_lg_demo.dir/all
 
 .PHONY : all
@@ -65,11 +70,124 @@ preinstall:
 .PHONY : preinstall
 
 # The main recursive "clean" target.
+clean: CMakeFiles/sp_lg_demo_gpu3.dir/clean
+clean: CMakeFiles/sp_lg_demo_gpu2.dir/clean
+clean: CMakeFiles/sp_lg_demo_gpu5.dir/clean
+clean: CMakeFiles/sp_lg_demo_gpu1.dir/clean
 clean: CMakeFiles/sp_lg_demo_gpu.dir/clean
 clean: CMakeFiles/sp_lg_demo_simple.dir/clean
+clean: CMakeFiles/sp_lg_demo_gpu4.dir/clean
 clean: CMakeFiles/sp_lg_demo.dir/clean
 
 .PHONY : clean
+
+#=============================================================================
+# Target rules for target CMakeFiles/sp_lg_demo_gpu3.dir
+
+# All Build rule for target.
+CMakeFiles/sp_lg_demo_gpu3.dir/all:
+	$(MAKE) -f CMakeFiles/sp_lg_demo_gpu3.dir/build.make CMakeFiles/sp_lg_demo_gpu3.dir/depend
+	$(MAKE) -f CMakeFiles/sp_lg_demo_gpu3.dir/build.make CMakeFiles/sp_lg_demo_gpu3.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/xjh/sp_lg_demo/build/CMakeFiles --progress-num=9,10 "Built target sp_lg_demo_gpu3"
+.PHONY : CMakeFiles/sp_lg_demo_gpu3.dir/all
+
+# Build rule for subdir invocation for target.
+CMakeFiles/sp_lg_demo_gpu3.dir/rule: cmake_check_build_system
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/xjh/sp_lg_demo/build/CMakeFiles 2
+	$(MAKE) -f CMakeFiles/Makefile2 CMakeFiles/sp_lg_demo_gpu3.dir/all
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/xjh/sp_lg_demo/build/CMakeFiles 0
+.PHONY : CMakeFiles/sp_lg_demo_gpu3.dir/rule
+
+# Convenience name for target.
+sp_lg_demo_gpu3: CMakeFiles/sp_lg_demo_gpu3.dir/rule
+
+.PHONY : sp_lg_demo_gpu3
+
+# clean rule for target.
+CMakeFiles/sp_lg_demo_gpu3.dir/clean:
+	$(MAKE) -f CMakeFiles/sp_lg_demo_gpu3.dir/build.make CMakeFiles/sp_lg_demo_gpu3.dir/clean
+.PHONY : CMakeFiles/sp_lg_demo_gpu3.dir/clean
+
+#=============================================================================
+# Target rules for target CMakeFiles/sp_lg_demo_gpu2.dir
+
+# All Build rule for target.
+CMakeFiles/sp_lg_demo_gpu2.dir/all:
+	$(MAKE) -f CMakeFiles/sp_lg_demo_gpu2.dir/build.make CMakeFiles/sp_lg_demo_gpu2.dir/depend
+	$(MAKE) -f CMakeFiles/sp_lg_demo_gpu2.dir/build.make CMakeFiles/sp_lg_demo_gpu2.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/xjh/sp_lg_demo/build/CMakeFiles --progress-num=7,8 "Built target sp_lg_demo_gpu2"
+.PHONY : CMakeFiles/sp_lg_demo_gpu2.dir/all
+
+# Build rule for subdir invocation for target.
+CMakeFiles/sp_lg_demo_gpu2.dir/rule: cmake_check_build_system
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/xjh/sp_lg_demo/build/CMakeFiles 2
+	$(MAKE) -f CMakeFiles/Makefile2 CMakeFiles/sp_lg_demo_gpu2.dir/all
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/xjh/sp_lg_demo/build/CMakeFiles 0
+.PHONY : CMakeFiles/sp_lg_demo_gpu2.dir/rule
+
+# Convenience name for target.
+sp_lg_demo_gpu2: CMakeFiles/sp_lg_demo_gpu2.dir/rule
+
+.PHONY : sp_lg_demo_gpu2
+
+# clean rule for target.
+CMakeFiles/sp_lg_demo_gpu2.dir/clean:
+	$(MAKE) -f CMakeFiles/sp_lg_demo_gpu2.dir/build.make CMakeFiles/sp_lg_demo_gpu2.dir/clean
+.PHONY : CMakeFiles/sp_lg_demo_gpu2.dir/clean
+
+#=============================================================================
+# Target rules for target CMakeFiles/sp_lg_demo_gpu5.dir
+
+# All Build rule for target.
+CMakeFiles/sp_lg_demo_gpu5.dir/all:
+	$(MAKE) -f CMakeFiles/sp_lg_demo_gpu5.dir/build.make CMakeFiles/sp_lg_demo_gpu5.dir/depend
+	$(MAKE) -f CMakeFiles/sp_lg_demo_gpu5.dir/build.make CMakeFiles/sp_lg_demo_gpu5.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/xjh/sp_lg_demo/build/CMakeFiles --progress-num=13,14 "Built target sp_lg_demo_gpu5"
+.PHONY : CMakeFiles/sp_lg_demo_gpu5.dir/all
+
+# Build rule for subdir invocation for target.
+CMakeFiles/sp_lg_demo_gpu5.dir/rule: cmake_check_build_system
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/xjh/sp_lg_demo/build/CMakeFiles 2
+	$(MAKE) -f CMakeFiles/Makefile2 CMakeFiles/sp_lg_demo_gpu5.dir/all
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/xjh/sp_lg_demo/build/CMakeFiles 0
+.PHONY : CMakeFiles/sp_lg_demo_gpu5.dir/rule
+
+# Convenience name for target.
+sp_lg_demo_gpu5: CMakeFiles/sp_lg_demo_gpu5.dir/rule
+
+.PHONY : sp_lg_demo_gpu5
+
+# clean rule for target.
+CMakeFiles/sp_lg_demo_gpu5.dir/clean:
+	$(MAKE) -f CMakeFiles/sp_lg_demo_gpu5.dir/build.make CMakeFiles/sp_lg_demo_gpu5.dir/clean
+.PHONY : CMakeFiles/sp_lg_demo_gpu5.dir/clean
+
+#=============================================================================
+# Target rules for target CMakeFiles/sp_lg_demo_gpu1.dir
+
+# All Build rule for target.
+CMakeFiles/sp_lg_demo_gpu1.dir/all:
+	$(MAKE) -f CMakeFiles/sp_lg_demo_gpu1.dir/build.make CMakeFiles/sp_lg_demo_gpu1.dir/depend
+	$(MAKE) -f CMakeFiles/sp_lg_demo_gpu1.dir/build.make CMakeFiles/sp_lg_demo_gpu1.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/xjh/sp_lg_demo/build/CMakeFiles --progress-num=5,6 "Built target sp_lg_demo_gpu1"
+.PHONY : CMakeFiles/sp_lg_demo_gpu1.dir/all
+
+# Build rule for subdir invocation for target.
+CMakeFiles/sp_lg_demo_gpu1.dir/rule: cmake_check_build_system
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/xjh/sp_lg_demo/build/CMakeFiles 2
+	$(MAKE) -f CMakeFiles/Makefile2 CMakeFiles/sp_lg_demo_gpu1.dir/all
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/xjh/sp_lg_demo/build/CMakeFiles 0
+.PHONY : CMakeFiles/sp_lg_demo_gpu1.dir/rule
+
+# Convenience name for target.
+sp_lg_demo_gpu1: CMakeFiles/sp_lg_demo_gpu1.dir/rule
+
+.PHONY : sp_lg_demo_gpu1
+
+# clean rule for target.
+CMakeFiles/sp_lg_demo_gpu1.dir/clean:
+	$(MAKE) -f CMakeFiles/sp_lg_demo_gpu1.dir/build.make CMakeFiles/sp_lg_demo_gpu1.dir/clean
+.PHONY : CMakeFiles/sp_lg_demo_gpu1.dir/clean
 
 #=============================================================================
 # Target rules for target CMakeFiles/sp_lg_demo_gpu.dir
@@ -105,7 +223,7 @@ CMakeFiles/sp_lg_demo_gpu.dir/clean:
 CMakeFiles/sp_lg_demo_simple.dir/all:
 	$(MAKE) -f CMakeFiles/sp_lg_demo_simple.dir/build.make CMakeFiles/sp_lg_demo_simple.dir/depend
 	$(MAKE) -f CMakeFiles/sp_lg_demo_simple.dir/build.make CMakeFiles/sp_lg_demo_simple.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/xjh/sp_lg_demo/build/CMakeFiles --progress-num=5,6 "Built target sp_lg_demo_simple"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/xjh/sp_lg_demo/build/CMakeFiles --progress-num=15,16 "Built target sp_lg_demo_simple"
 .PHONY : CMakeFiles/sp_lg_demo_simple.dir/all
 
 # Build rule for subdir invocation for target.
@@ -124,6 +242,33 @@ sp_lg_demo_simple: CMakeFiles/sp_lg_demo_simple.dir/rule
 CMakeFiles/sp_lg_demo_simple.dir/clean:
 	$(MAKE) -f CMakeFiles/sp_lg_demo_simple.dir/build.make CMakeFiles/sp_lg_demo_simple.dir/clean
 .PHONY : CMakeFiles/sp_lg_demo_simple.dir/clean
+
+#=============================================================================
+# Target rules for target CMakeFiles/sp_lg_demo_gpu4.dir
+
+# All Build rule for target.
+CMakeFiles/sp_lg_demo_gpu4.dir/all:
+	$(MAKE) -f CMakeFiles/sp_lg_demo_gpu4.dir/build.make CMakeFiles/sp_lg_demo_gpu4.dir/depend
+	$(MAKE) -f CMakeFiles/sp_lg_demo_gpu4.dir/build.make CMakeFiles/sp_lg_demo_gpu4.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/xjh/sp_lg_demo/build/CMakeFiles --progress-num=11,12 "Built target sp_lg_demo_gpu4"
+.PHONY : CMakeFiles/sp_lg_demo_gpu4.dir/all
+
+# Build rule for subdir invocation for target.
+CMakeFiles/sp_lg_demo_gpu4.dir/rule: cmake_check_build_system
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/xjh/sp_lg_demo/build/CMakeFiles 2
+	$(MAKE) -f CMakeFiles/Makefile2 CMakeFiles/sp_lg_demo_gpu4.dir/all
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/xjh/sp_lg_demo/build/CMakeFiles 0
+.PHONY : CMakeFiles/sp_lg_demo_gpu4.dir/rule
+
+# Convenience name for target.
+sp_lg_demo_gpu4: CMakeFiles/sp_lg_demo_gpu4.dir/rule
+
+.PHONY : sp_lg_demo_gpu4
+
+# clean rule for target.
+CMakeFiles/sp_lg_demo_gpu4.dir/clean:
+	$(MAKE) -f CMakeFiles/sp_lg_demo_gpu4.dir/build.make CMakeFiles/sp_lg_demo_gpu4.dir/clean
+.PHONY : CMakeFiles/sp_lg_demo_gpu4.dir/clean
 
 #=============================================================================
 # Target rules for target CMakeFiles/sp_lg_demo.dir

@@ -1,5 +1,10 @@
 /home/xjh/sp_lg_demo/build/CMakeFiles/rebuild_cache.dir
 /home/xjh/sp_lg_demo/build/CMakeFiles/edit_cache.dir
+/home/xjh/sp_lg_demo/build/CMakeFiles/sp_lg_demo_gpu3.dir
+/home/xjh/sp_lg_demo/build/CMakeFiles/sp_lg_demo_gpu2.dir
+/home/xjh/sp_lg_demo/build/CMakeFiles/sp_lg_demo_gpu5.dir
+/home/xjh/sp_lg_demo/build/CMakeFiles/sp_lg_demo_gpu1.dir
 /home/xjh/sp_lg_demo/build/CMakeFiles/sp_lg_demo_gpu.dir
 /home/xjh/sp_lg_demo/build/CMakeFiles/sp_lg_demo_simple.dir
+/home/xjh/sp_lg_demo/build/CMakeFiles/sp_lg_demo_gpu4.dir
 /home/xjh/sp_lg_demo/build/CMakeFiles/sp_lg_demo.dir
