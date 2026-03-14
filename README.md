@@ -17,6 +17,8 @@
 
 ---
 
+![alt text](对比说明图.png)
+
 ## 1. 项目功能
 
 ### `src/sp_lg_demo.cpp`（`sp_lg_demo`）
